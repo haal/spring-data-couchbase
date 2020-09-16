@@ -20,6 +20,7 @@ import static org.springframework.data.couchbase.core.query.QueryCriteria.*;
 
 import java.lang.reflect.Method;
 
+import com.couchbase.client.java.json.JsonArray;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.couchbase.core.convert.CouchbaseConverter;
@@ -63,6 +64,35 @@ class N1qlQueryCreatorTests {
 	}
 
 	@Test
+	void queryParametersArray() throws Exception {
+		String input = "findByFirstnameIn";
+		PartTree tree = new PartTree(input, User.class);
+		Method method = UserRepository.class.getMethod(input, String[].class);
+
+		N1qlQueryCreator creator = new N1qlQueryCreator(tree,
+				getAccessor(getParameters(method), new Object[] { new String[] { "Oliver", "Charles" } }), null, converter);
+		Query query = creator.createQuery();
+
+		assertEquals(" WHERE " + where("firstname").in("Oliver", "Charles").export(), query.export());
+	}
+
+	@Test
+	void queryParametersJsonArray() throws Exception {
+		String input = "findByFirstnameIn";
+		PartTree tree = new PartTree(input, User.class);
+		Method method = UserRepository.class.getMethod(input, JsonArray.class);
+
+		JsonArray jsonArray = JsonArray.create();
+		jsonArray.add("Oliver");
+		jsonArray.add("Charles");
+		N1qlQueryCreator creator = new N1qlQueryCreator(tree, getAccessor(getParameters(method), jsonArray), null,
+				converter);
+		Query query = creator.createQuery();
+
+		assertEquals(" WHERE " + where("firstname").in(new String[] { "Oliver", "Charles" }).export(), query.export());
+	}
+
+	@Test
 	void createsAndQueryCorrectly() throws Exception {
 		String input = "findByFirstnameAndLastname";
 		PartTree tree = new PartTree(input, User.class);
@@ -71,7 +101,7 @@ class N1qlQueryCreatorTests {
 				converter);
 		Query query = creator.createQuery();
 
-		assertEquals(query.export(), " WHERE " + where("firstname").is("John").and("lastname").is("Doe").export());
+		assertEquals( " WHERE " + where("firstname").is("John").and("lastname").is("Doe").export(), query.export());
 	}
 
 	private ParameterAccessor getAccessor(Parameters<?, ?> params, Object... values) {

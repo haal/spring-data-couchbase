@@ -70,7 +70,7 @@ class QueryCriteriaTests {
 		QueryCriteria c = where("name").is("Bubba").or(where("age").gt(12).or("country").is("Austria")).and(
 				where("state").notIn(new String[] { "Alabama", "Florida" }));
 		assertEquals("`name` = \"Bubba\" or (`age` > 12 or `country` = \"Austria\") and "
-				+ "(not( (`state` in ( [ \"Alabama\", \"Florida\" ] )) ))", c.export());
+				+ "(not( (`state` in ( [\"Alabama\",\"Florida\"] )) ))", c.export());
 	}
 
 	@Test
@@ -205,13 +205,13 @@ class QueryCriteriaTests {
 	@Test
 	void testIn() {
 		QueryCriteria c = where("name").in(new String[] { "gump", "davis" });
-		assertEquals("`name` in ( [ \"gump\", \"davis\" ] )", c.export());
+		assertEquals("`name` in ( [\"gump\",\"davis\"] )", c.export());
 	}
 
 	@Test
 	void testNotIn() {
 		QueryCriteria c = where("name").notIn(new String[] { "gump", "davis" });
-		assertEquals("not( (`name` in ( [ \"gump\", \"davis\" ] )) )", c.export());
+		assertEquals("not( (`name` in ( [\"gump\",\"davis\"] )) )", c.export());
 	}
 
 	@Test

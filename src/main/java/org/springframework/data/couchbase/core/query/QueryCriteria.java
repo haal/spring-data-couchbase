@@ -20,6 +20,7 @@ import java.util.Formatter;
 import java.util.LinkedList;
 import java.util.List;
 
+import com.couchbase.client.java.json.JsonArray;
 import org.springframework.lang.Nullable;
 
 /**
@@ -68,7 +69,7 @@ public class QueryCriteria implements QueryCriteriaDefinition {
 	}
 
 	private static QueryCriteria wrap(QueryCriteria criteria) {
-		QueryCriteria qc = new QueryCriteria(new LinkedList<QueryCriteria>(), criteria.key, criteria.value, null,
+		QueryCriteria qc = new QueryCriteria(new LinkedList<>(), criteria.key, criteria.value, null,
 				criteria.operator, criteria.format);
 		return qc;
 	}
@@ -167,7 +168,7 @@ public class QueryCriteria implements QueryCriteriaDefinition {
 	public QueryCriteria notContaining(@Nullable Object o) {
 		value = new QueryCriteria[] { wrap(containing(o)) };
 		operator = "NOT";
-		format = format = "not( %3$s )";
+		format = "not( %3$s )";
 		return this;
 	}
 
@@ -196,7 +197,7 @@ public class QueryCriteria implements QueryCriteriaDefinition {
 		operator = "IS_NOT_NULL";
 		value = null;
 		format = "%1$s is not null";
-		return (QueryCriteria) this;
+		return this;
 	}
 
 	public QueryCriteria isMissing() {
@@ -210,7 +211,7 @@ public class QueryCriteria implements QueryCriteriaDefinition {
 		operator = "IS_NOT_MiSSING";
 		value = null;
 		format = "%1$s is not missing";
-		return (QueryCriteria) this;
+		return this;
 	}
 
 	public QueryCriteria isValued() {
@@ -224,64 +225,73 @@ public class QueryCriteria implements QueryCriteriaDefinition {
 		operator = "IS_NOT_VALUED";
 		value = null;
 		format = "%1$s is not valued";
-		return (QueryCriteria) this;
+		return this;
 	}
 
 	public QueryCriteria within(@Nullable Object o) {
 		operator = "WITHIN";
 		value = new Object[] { o };
 		format = "%1$s within $3$s";
-		return (QueryCriteria) this;
+		return this;
 	}
 
 	public QueryCriteria between(@Nullable Object o1, @Nullable Object o2) {
 		operator = "BETWEEN";
 		value = new Object[] { o1, o2 };
 		format = "%1$s between %3$s and %4$s";
-		return (QueryCriteria) this;
+		return this;
 	}
 
 	public QueryCriteria in(@Nullable Object... o) {
 		operator = "IN";
 		value = o;
-		StringBuilder sb = new StringBuilder("%1$s in ( [ ");
+		StringBuilder sb = new StringBuilder("%1$s in ( ");
+		boolean notArray = false;
+		// if parameter is an array, then toString() will provide brackets [ ... ]
+		if (!(value.length == 1 && (value[0] instanceof Object[] || value[0] instanceof JsonArray))) {
+			notArray = true;
+			sb.append("[");
+		}
 		for (int i = 1; i <= value.length; i++) { // format indices start at 1
 			if (i > 1)
-				sb.append(", ");
+				sb.append(",");
 			sb.append("%" + (i + 2) + "$s"); // the first is fieldName, second is operator, args start at 3
 		}
-		format = sb.append(" ] )").toString();
-		return (QueryCriteria) this;
+		if (notArray) {
+			sb.append("]");
+		}
+		format = sb.append(" )").toString();
+		return this;
 	}
 
 	public QueryCriteria notIn(@Nullable Object... o) {
 		value = new QueryCriteria[] { wrap(in(o)) };
 		operator = "NOT";
-		format = format = "not( %3$s )"; // field = 1$, operator = 2$, value=$3, $4, ...
-		return (QueryCriteria) this;
+		format = "not( %3$s )"; // field = 1$, operator = 2$, value=$3, $4, ...
+		return this;
 	}
 
 	public QueryCriteria TRUE() { // true/false are reserved, use TRUE/FALSE
 		value = null;
 		operator = null;
-		format = format = "%1$s"; // field = 1$, operator = 2$, value=$3, $4, ...
-		return (QueryCriteria) this;
+		format = "%1$s"; // field = 1$, operator = 2$, value=$3, $4, ...
+		return this;
 	}
 
 	public QueryCriteria FALSE() {
 		value = new QueryCriteria[] { wrap(TRUE()) };
 		operator = "not";
-		format = format = "not( %3$s )";
-		return (QueryCriteria) this;
+		format = "not( %3$s )";
+		return this;
 	}
 
 	/**
 	 * This exports the query criteria into a string to be appended to the beginning of an N1QL statement
 	 *
-	 * @param paramIndexPtr - this is a reference to the parameter index to be used for positional parameters
-	 *                      There may already be positional parameters in the beginning of the statement,
-	 *                      so it may not always start at 1.  If it has the value -1, the query is using
-	 *                      named parameters. If the pointer is null, the query is not using parameters.
+	 * @param paramIndexPtr - this is a reference to the parameter index to be used for positional parameters There may
+	 *          already be positional parameters in the beginning of the statement, so it may not always start at 1. If it
+	 *          has the value -1, the query is using named parameters. If the pointer is null, the query is not using
+	 *          parameters.
 	 * @return string containing part of N1QL query
 	 */
 	@Override
@@ -353,6 +363,18 @@ public class QueryCriteria implements QueryCriteriaDefinition {
 			return "\"" + value + "\"";
 		} else if (value == null) {
 			return "null";
+		} else if (value instanceof Object[]) {
+			StringBuffer l = new StringBuffer();
+			l.append("[");
+			Object[] array = (Object[]) value;
+			for (int i = 0; i < array.length; i++) {
+				if (i > 0) {
+					l.append(",");
+				}
+				l.append(maybeWrapValue(null, array[i], null));
+			}
+			l.append("]");
+			return l.toString();
 		} else {
 			return value.toString();
 		}

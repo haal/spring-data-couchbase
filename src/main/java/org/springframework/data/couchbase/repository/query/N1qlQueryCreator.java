@@ -141,9 +141,9 @@ public class N1qlQueryCreator extends AbstractQueryCreator<Query, QueryCriteria>
 		case BETWEEN:
 			return criteria.between(parameters.next(), parameters.next());
 		case IN:
-			return criteria.in((Object[]) parameters.next());
+			return criteria.in(parameters.next());
 		case NOT_IN:
-			return criteria.notIn((Object[]) parameters.next());
+			return criteria.notIn(parameters.next());
 		case TRUE:
 			return criteria.TRUE();
 		case FALSE:
